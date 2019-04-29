@@ -1,6 +1,8 @@
 
-library(tidyverse)
+#library(tidyverse)
 library(futile.logger)
+library(ggplot2)
+library(dplyr)
 
 # plot expression density by chromosome for each observation group, reference groups are shown as single 'normal' group.
 plot_density_by_chr <- function(infercnv_obj, pdf_filename=NULL, exclude_range=NULL, include_range = NULL, chrs=NULL) {
@@ -189,9 +191,9 @@ get_mean_var <- function(infercnv_obj) {
         m = rowMeans(expr.data)
         v = apply(expr.data, 1, var)
         if (is.null(mean_var_table)) {
-            mean_var_table = data.frame(g=group, m=m, v=v)
+            mean_var_table = data.frame(g=group_name, m=m, v=v)
         } else {
-            mean_var_table = rbind(mean_var_table, data.frame(g=group, m=m, v=v))
+            mean_var_table = rbind(mean_var_table, data.frame(g=group_name, m=m, v=v))
         }
     }
 
