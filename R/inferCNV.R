@@ -27,6 +27,8 @@
 #' 
 #' @slot tumor_subclusters <list> stores subclustering of tumors if requested
 #'
+#' @slot options <list> stores the options relevant to the analysis in itself (in contrast with options relevant to plotting or paths)
+#'
 #' @slot .hspike a hidden infercnv object populated with simulated spiked-in data
 #' 
 #' @export
@@ -41,6 +43,7 @@ infercnv <- methods::setClass(
                              reference_grouped_cell_indices = "list",
                              observation_grouped_cell_indices = "list",
                              tumor_subclusters  = "ANY",
+                             options = "list",
                              .hspike = "ANY") )
 
 
@@ -152,9 +155,11 @@ CreateInfercnvObject <- function(raw_counts_matrix,
             raw.data <- read.table(raw_counts_matrix, sep=delim, header=TRUE, row.names=1, check.names=FALSE)    
             raw.data <- as.matrix(raw.data)
         }
-    } else if (Reduce("|", is(raw_counts_matrix) %in% c("dgCMatrix", "matrix", "data.frame"))) {
+    } else if (Reduce("|", is(raw_counts_matrix) %in% c("dgCMatrix", "matrix"))) {
         # use as is:
         raw.data <- raw_counts_matrix
+    } else if (Reduce("|", is(raw_counts_matrix) %in% c("data.frame"))) {
+        raw.data <- as.matrix(raw_counts_matrix)
     } else {
         stop("CreateInfercnvObject:: Error, raw_counts_matrix isn't recognized as a matrix, data.frame, or filename")
     }
@@ -162,9 +167,9 @@ CreateInfercnvObject <- function(raw_counts_matrix,
     ## get gene order info
     if (Reduce("|", is(gene_order_file) == "character")) {
         flog.info(sprintf("Parsing gene order file: %s", gene_order_file))
-        gene_order <- read.table(gene_order_file, header=FALSE, row.names=1, sep="\t")
+        gene_order <- read.table(gene_order_file, header=FALSE, row.names=1, sep="\t", check.names=FALSE)
     }
-    else if (Reduce("|", is(raw_counts_matrix) %in% c("dgCMatrix", "matrix", "data.frame"))) {
+    else if (Reduce("|", is(gene_order_file) %in% c("dgCMatrix", "matrix", "data.frame"))) {
         gene_order <- gene_order_file
     }
     else {
@@ -178,7 +183,7 @@ CreateInfercnvObject <- function(raw_counts_matrix,
     ## read annotations file
     if (Reduce("|", is(annotations_file) == "character")) {
         flog.info(sprintf("Parsing cell annotations file: %s", annotations_file))
-        input_classifications <- read.table(annotations_file, header=FALSE, row.names=1, sep=delim, stringsAsFactors=FALSE, colClasses = 'character')
+        input_classifications <- read.table(annotations_file, header=FALSE, row.names=1, sep=delim, stringsAsFactors=FALSE, colClasses = c('character', 'character'))
     }
     else if (Reduce("|", is(annotations_file) %in% c("dgCMatrix", "matrix", "data.frame"))) {
         input_classifications <- annotations_file
@@ -310,6 +315,10 @@ CreateInfercnvObject <- function(raw_counts_matrix,
         reference_grouped_cell_indices = ref_group_cell_indices,
         observation_grouped_cell_indices = obs_group_cell_indices,
         tumor_subclusters = NULL,
+        options = list("chr_exclude" = chr_exclude,
+                       "max_cells_per_group" = max_cells_per_group,
+                       "min_max_counts_per_cell" = min_max_counts_per_cell,
+                       "counts_md5" = digest(raw.data)),
         .hspike = NULL)
 
     validate_infercnv_obj(object)

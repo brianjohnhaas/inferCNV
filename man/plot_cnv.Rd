@@ -9,9 +9,10 @@ plot_cnv(infercnv_obj, out_dir = ".", title = "inferCNV",
   cluster_by_groups = TRUE, cluster_references = TRUE,
   k_obs_groups = 3, contig_cex = 1,
   x.center = mean(infercnv_obj@expr.data), x.range = "auto",
-  hclust_method = "ward.D", color_safe_pal = FALSE,
-  output_filename = "infercnv", output_format = "png", png_res = 300,
-  dynamic_resize = 0, ref_contig = NULL, write_expr_matrix = FALSE)
+  hclust_method = "ward.D", custom_color_pal = NULL,
+  color_safe_pal = FALSE, output_filename = "infercnv",
+  output_format = "png", png_res = 300, dynamic_resize = 0,
+  ref_contig = NULL, write_expr_matrix = FALSE, useRaster = TRUE)
 }
 \arguments{
 \item{infercnv_obj}{infercnv object}
@@ -38,6 +39,10 @@ plot_cnv(infercnv_obj, out_dir = ".", title = "inferCNV",
 
 \item{hclust_method}{Clustering method to use for hclust.}
 
+\item{custom_color_pal}{Specify a custom set of colors for the heatmap. 
+Has to be in the shape color.palette(c("darkblue", "white", "darkred"),
+                                     c(2, 2))}
+
 \item{color_safe_pal}{Logical indication of using a color blindness safe palette.}
 
 \item{output_filename}{Filename to save the figure to.}
@@ -54,6 +59,8 @@ Default is 0, which disables the scaling. Try 1 first if you want to enable.}
 \item{ref_contig}{If given, will focus cluster on only genes in this contig.}
 
 \item{write_expr_matrix}{Includes writing a matrix file containing the expression data that is plotted in the heatmap.}
+
+\item{useRaster}{Whether to use rasterization for drawing heatmap. Only disable if it produces an error as it is much faster than not using it.}
 }
 \value{
 A list of all relevent settings used for the plotting to be able to reuse them in another plot call while keeping consistant plotting settings, most importantly x.range.
@@ -73,7 +80,7 @@ Formats the data and sends it for plotting.
 
 # infercnv_obj <- infercnv::run(infercnv_obj,
 #                               cutoff=1,
-#                               out_dir="../example_output", 
+#                               out_dir=tempfile(), 
 #                               cluster_by_groups=TRUE, 
 #                               denoise=TRUE,
 #                               HMM=FALSE,
@@ -83,7 +90,7 @@ Formats the data and sends it for plotting.
 data(infercnv_object)
 
 plot_cnv(infercnv_obj,
-         out_dir=".",
+         out_dir=tempfile(),
          obs_title="Observations (Cells)",
          ref_title="References (Cells)",
          cluster_by_groups=TRUE,

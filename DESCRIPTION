@@ -1,13 +1,13 @@
 Package: infercnv
 Type: Package
 Title: Infer Copy Number Variation from Single-Cell RNA-Seq Data
-Version: 0.99.7
-Date: 2019-04-20
+Version: 1.3.4
+Date: 2019-02-18
 Authors@R: c( person("Timothy", "Tickle", email = "ttickle@broadinstitute.org", role = "aut"), person("Itay", "Tirosh", email = "tirosh@broadinstitute.org", role = "aut"), person("Christophe", "Georgescu", email = "cgeorges@broadinstitute.org", role = c("aut", "cre")), person("Maxwell", "Brown", email = "mbrown@broadinstitute.org", role = "aut"), person("Brian", "Haas", email = "bhaas@broadinstitute.org", role = "aut")) 
 BugReports: https://github.com/broadinstitute/inferCNV/issues
 Description: Using single-cell RNA-Seq expression to visualize CNV in cells.
 biocViews: Software, CopyNumberVariation, VariantDetection, StructuralVariation, GenomicVariation, Genetics, Transcriptomics, StatisticalMethod, Bayesian, HiddenMarkovModel, SingleCell
-Depends: R(>= 3.6)
+Depends: R(>= 4.0)
 License: BSD_3_clause + file LICENSE
 LazyData: TRUE
 VignetteBuilder: knitr
@@ -15,7 +15,7 @@ Suggests: BiocStyle, knitr, rmarkdown, testthat
 RoxygenNote: 6.1.1
 NeedsCompilation: no
 SystemRequirements: JAGS 4.x.y
-Imports: graphics, grDevices, RColorBrewer, gplots, futile.logger, stats, utils, methods, ape, Matrix,  fastcluster, dplyr, HiddenMarkov, ggplot2, edgeR, coin, caTools, reshape, rjags, fitdistrplus, future, foreach, doParallel, BiocGenerics, SummarizedExperiment, SingleCellExperiment, tidyr, parallel, coda, gridExtra, argparse
+Imports: graphics, grDevices, RColorBrewer, gplots, futile.logger, stats, utils, methods, ape, Matrix, fastcluster, dplyr, HiddenMarkov, ggplot2, edgeR, coin, caTools, digest, reshape, rjags, fitdistrplus, future, foreach, doParallel, BiocGenerics, SummarizedExperiment, SingleCellExperiment, tidyr, parallel, coda, gridExtra, argparse
 URL: https://github.com/broadinstitute/inferCNV/wiki
 Collate: 
     'SplatterScrape.R'
@@ -33,4 +33,6 @@ Collate:
     'inferCNV_simple_sim.R'
     'inferCNV_tumor_subclusters.R'
     'inferCNV_tumor_subclusters.random_smoothed_trees.R'
+    'infercnv_sampling.R'
     'noise_reduction.R'
+    'seurat_interaction.R'

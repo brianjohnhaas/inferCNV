@@ -7,7 +7,10 @@ define_signif_tumor_subclusters <- function(infercnv_obj, p_val, hclust_method, 
 
     res = list()
 
-    normal_expr_data = infercnv_obj@expr.data[, unlist(infercnv_obj@reference_grouped_cell_indices) ]
+    if (restrict_to_DE_genes) {
+        normal_expr_data = infercnv_obj@expr.data[, unlist(infercnv_obj@reference_grouped_cell_indices) ]
+    }
+    
     tumor_groups = list()
 
     if (cluster_by_groups) {
@@ -27,7 +30,8 @@ define_signif_tumor_subclusters <- function(infercnv_obj, p_val, hclust_method, 
         flog.info(sprintf("define_signif_tumor_subclusters(), tumor: %s", tumor_group))
         
         tumor_group_idx <- tumor_groups[[ tumor_group ]]
-        tumor_expr_data <- infercnv_obj@expr.data[,tumor_group_idx]
+        tumor_group_cell_names <- colnames(infercnv_obj@expr.data[,tumor_group_idx])
+        tumor_expr_data <- infercnv_obj@expr.data[,tumor_group_idx, drop=FALSE]
 
         if (restrict_to_DE_genes) {
             p_vals <- .find_DE_stat_significance(normal_expr_data, tumor_expr_data)
@@ -37,7 +41,7 @@ define_signif_tumor_subclusters <- function(infercnv_obj, p_val, hclust_method, 
             
         }
         
-        tumor_subcluster_info <- .single_tumor_subclustering(tumor_group, tumor_group_idx, tumor_expr_data, p_val, hclust_method, partition_method)
+        tumor_subcluster_info <- .single_tumor_subclustering(tumor_group, tumor_group_idx, tumor_group_cell_names, tumor_expr_data, p_val, hclust_method, partition_method)
         
         res$hc[[tumor_group]] <- tumor_subcluster_info$hc
         res$subclusters[[tumor_group]] <- tumor_subcluster_info$subclusters
@@ -58,7 +62,7 @@ define_signif_tumor_subclusters <- function(infercnv_obj, p_val, hclust_method, 
 
 
 
-.single_tumor_subclustering <- function(tumor_name, tumor_group_idx, tumor_expr_data, p_val, hclust_method,
+.single_tumor_subclustering <- function(tumor_name, tumor_group_idx, tumor_group_cell_names, tumor_expr_data, p_val, hclust_method,
                                         partition_method=c('qnorm', 'pheight', 'qgamma', 'shc', 'none')
                                         ) {
     
@@ -66,76 +70,85 @@ define_signif_tumor_subclusters <- function(infercnv_obj, p_val, hclust_method, 
     
     tumor_subcluster_info = list()
     
-    hc <- hclust(dist(t(tumor_expr_data)), method=hclust_method)
-    
-    tumor_subcluster_info$hc = hc
-    
-    heights = hc$height
+    if (ncol(tumor_expr_data) > 2) {
 
-    grps <- NULL
-    
-    if (partition_method == 'pheight') {
+        hc <- hclust(dist(t(tumor_expr_data)), method=hclust_method)
+        
+        tumor_subcluster_info$hc = hc
+        
+        heights = hc$height
 
-        cut_height = p_val * max(heights)
-        flog.info(sprintf("cut height based on p_val(%g) = %g and partition_method: %s", p_val, cut_height, partition_method))
-        grps <- cutree(hc, h=cut_height) # will just be one cluster if height > max_height
+        grps <- NULL
+        
+        if (partition_method == 'pheight') {
 
-        
-    } else if (partition_method == 'qnorm') {
+            cut_height = p_val * max(heights)
+            flog.info(sprintf("cut height based on p_val(%g) = %g and partition_method: %s", p_val, cut_height, partition_method))
+            grps <- cutree(hc, h=cut_height) # will just be one cluster if height > max_height
 
-        mu = mean(heights)
-        sigma = sd(heights)
-        
-        cut_height = qnorm(p=1-p_val, mean=mu, sd=sigma)
-        flog.info(sprintf("cut height based on p_val(%g) = %g and partition_method: %s", p_val, cut_height, partition_method))
-        grps <- cutree(hc, h=cut_height) # will just be one cluster if height > max_height
-        
-    } else if (partition_method == 'qgamma') {
+            
+        } else if (partition_method == 'qnorm') {
 
-        # library(fitdistrplus)
-        gamma_fit = fitdist(heights, 'gamma')
-        shape = gamma_fit$estimate[1]
-        rate = gamma_fit$estimate[2]
-        cut_height=qgamma(p=1-p_val, shape=shape, rate=rate)
-        flog.info(sprintf("cut height based on p_val(%g) = %g and partition_method: %s", p_val, cut_height, partition_method))
-        grps <- cutree(hc, h=cut_height) # will just be one cluster if height > max_height
+            mu = mean(heights)
+            sigma = sd(heights)
+            
+            cut_height = qnorm(p=1-p_val, mean=mu, sd=sigma)
+            flog.info(sprintf("cut height based on p_val(%g) = %g and partition_method: %s", p_val, cut_height, partition_method))
+            grps <- cutree(hc, h=cut_height) # will just be one cluster if height > max_height
+            
+        } else if (partition_method == 'qgamma') {
+
+            # library(fitdistrplus)
+            gamma_fit = fitdist(heights, 'gamma')
+            shape = gamma_fit$estimate[1]
+            rate = gamma_fit$estimate[2]
+            cut_height=qgamma(p=1-p_val, shape=shape, rate=rate)
+            flog.info(sprintf("cut height based on p_val(%g) = %g and partition_method: %s", p_val, cut_height, partition_method))
+            grps <- cutree(hc, h=cut_height) # will just be one cluster if height > max_height
+            
+        #} else if (partition_method == 'shc') {
+        #    
+        #    grps <- .get_shc_clusters(tumor_expr_data, hclust_method, p_val)
+            
+        } else if (partition_method == 'none') {
+            
+            grps <- cutree(hc, k=1)
+            
+        } else {
+            stop("Error, not recognizing parition_method")
+        }
         
-    #} else if (partition_method == 'shc') {
-    #    
-    #    grps <- .get_shc_clusters(tumor_expr_data, hclust_method, p_val)
+        # cluster_ids = unique(grps)
+        # flog.info(sprintf("cut tree into: %g groups", length(cluster_ids)))
         
-    } else if (partition_method == 'none') {
+        tumor_subcluster_info$subclusters = list()
         
-        grps <- cutree(hc, k=1)
-        
-    } else {
-        stop("Error, not recognizing parition_method")
+        ordered_idx = tumor_group_idx[hc$order]
+        s = split(grps,grps)
+        flog.info(sprintf("cut tree into: %g groups", length(s)))
+
+        start_idx = 1
+
+        # for (g in cluster_ids) {
+        for (g in names(s)) {
+            
+            split_subcluster = paste0(tumor_name, "_s", g)
+            flog.info(sprintf("-processing %s,%s", tumor_name, split_subcluster))
+            
+            # subcluster_indices = tumor_group_idx[which(grps == g)]
+            end_idx = start_idx + length(s[[g]]) - 1
+            subcluster_indices = tumor_group_idx[hc$order[start_idx:end_idx]]
+            subcluster_names = tumor_group_cell_names[hc$order[start_idx:end_idx]]
+            start_idx = end_idx + 1
+            
+            tumor_subcluster_info$subclusters[[ split_subcluster ]] = subcluster_indices
+            names(tumor_subcluster_info$subclusters[[ split_subcluster ]]) = subcluster_names
+
+        }
     }
-    
-    # cluster_ids = unique(grps)
-    # flog.info(sprintf("cut tree into: %g groups", length(cluster_ids)))
-    
-    tumor_subcluster_info$subclusters = list()
-    
-    ordered_idx = tumor_group_idx[hc$order]
-    s = split(grps,grps)
-    flog.info(sprintf("cut tree into: %g groups", length(s)))
-
-    start_idx = 1
-
-    # for (g in cluster_ids) {
-    for (g in names(s)) {
-        
-        split_subcluster = paste0(tumor_name, "_s", g)
-        flog.info(sprintf("-processing %s,%s", tumor_name, split_subcluster))
-        
-        # subcluster_indices = tumor_group_idx[which(grps == g)]
-        end_idx = start_idx + length(s[[g]]) - 1
-        subcluster_indices = tumor_group_idx[hc$order[start_idx:end_idx]]
-        start_idx = end_idx + 1
-        
-        tumor_subcluster_info$subclusters[[ split_subcluster ]] = subcluster_indices
-        
+    else {
+        tumor_subcluster_info$hc = NULL # can't make hc with a single element, even manually, need to have workaround in plotting step
+        tumor_subcluster_info$subclusters[[paste0(tumor_name, "_s1") ]] = tumor_group_idx
     }
     
     return(tumor_subcluster_info)
